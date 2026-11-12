@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7f4">
+    <meta name="description" content="A considered navigation concept for finding your way around Malaysia.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Jalan — Find your way</title>
+    <link rel="icon" href="assets/icons/mark.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" defer></script>
+    <script src="api-config.js" defer></script>
+    <script src="script.js" defer></script>
+    <script src="pwa.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="map-stage" aria-label="Map of Malaysia">
+        <div id="map" class="map" aria-label="Interactive OpenStreetMap map centered on Kuala Lumpur"></div>
+        <div class="map-wash" aria-hidden="true"></div>
+
+        <header class="map-header">
+          <button class="icon-button menu-button" id="menu-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <a class="brand" href="#" aria-label="Jalan home">
+            <img src="assets/icons/mark.svg" alt="" width="34" height="34">
+            <span class="brand-name">jalan<span class="brand-period">.</span></span>
+            <span class="brand-region">MALAYSIA</span>
+          </a>
+          <form class="search-bar" id="search-form" role="search" aria-busy="false">
+            <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2"/></svg>
+            <label class="sr-only" for="place-search">Search a place or address</label>
+            <input id="place-search" type="search" role="combobox" placeholder="Where do you want to go?" autocomplete="off" aria-autocomplete="list" aria-haspopup="listbox" aria-controls="search-results" aria-expanded="false">
+            <span class="search-hint" aria-hidden="true">⌘ K</span>
+            <button class="search-submit" type="submit" aria-label="Search">
+              <svg class="search-submit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+              <span class="search-spinner" aria-hidden="true"></span>
+            </button>
+            <div class="search-results" id="search-results" role="listbox" aria-label="Malaysian places" hidden></div>
+          </form>
+          <span class="sr-only" id="search-status" role="status" aria-live="polite"></span>
+          <button class="avatar-button" type="button" aria-label="Profile menu">N</button>
+        </header>
+
+        <div class="platform-controls" aria-label="App status and installation">
+          <div class="connectivity-indicator" id="connectivity-status" role="status" aria-live="polite" data-state="online" title="Your browser reports a network connection; map and route services may still be unavailable.">
+            <span class="connectivity-dot" aria-hidden="true"></span>
+            <span id="connectivity-label">Online</span>
+          </div>
+          <button class="install-app-button" id="install-app" type="button" aria-expanded="false" aria-controls="install-help">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg>
+            <span>Install Jalan</span>
+          </button>
+          <p class="platform-help" id="install-help" role="status" hidden></p>
+          <div class="pwa-update-banner" id="pwa-update-banner" role="status" aria-live="polite" hidden>
+            <p id="pwa-update-message">A Jalan update is ready.</p>
+            <button id="apply-update" type="button">Update Jalan</button>
+          </div>
+        </div>
+
+        <div class="map-tools">
+          <button class="map-tool" id="locate-button" type="button" aria-label="Re-centre on my location" title="Re-centre on my location">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+          </button>
+          <button class="map-tool" id="route-toggle" type="button" aria-label="Open route planner" title="Plan a route">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H11a3 3 0 0 0 3-3v-6a3 3 0 0 1 3-3"/></svg>
+          </button>
+        </div>
+
+        <aside class="tracking-panel" aria-label="Live location tracking">
+          <div class="tracking-status" role="status" aria-live="polite">
+            <span class="tracking-status-dot" id="tracking-status-dot" aria-hidden="true"></span>
+            <span id="tracking-status">Tracking is off</span>
+          </div>
+          <div class="tracking-actions">
+            <button class="tracking-button tracking-start" id="tracking-start" type="button">Start tracking</button>
+            <button class="tracking-button tracking-stop" id="tracking-stop" type="button" hidden>Stop tracking</button>
+            <button class="tracking-button tracking-follow" id="tracking-follow" type="button" aria-pressed="false" disabled>Follow off</button>
+          </div>
+        </aside>
+
+        <aside class="route-card" id="route-card" aria-labelledby="route-title" hidden>
+          <div class="route-card-heading">
+            <div>
+              <span class="eyebrow">A BETTER WAY THERE</span>
+              <h2 id="route-title">Your route</h2>
+            </div>
+            <button class="icon-button close-route" id="route-close" type="button" aria-label="Close route planner">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+          <form id="route-form" class="route-form">
+            <div class="route-input route-origin-input">
+              <span class="route-dot origin-dot"></span>
+              <span class="route-origin-copy">
+                <span class="route-field-label">FROM</span>
+                <span class="route-origin-name" id="route-origin-name">Current location not set</span>
+              </span>
+              <button class="origin-search-button" id="origin-search-button" type="button">Search</button>
+              <button class="use-location-button" id="use-location-button" type="button" aria-label="Use my current location">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+                <span>Use my location</span>
+              </button>
+            </div>
+            <span class="route-connector" aria-hidden="true"></span>
+            <button class="swap-route-button" id="swap-route-button" type="button" aria-label="Swap starting point and destination" title="Swap origin and destination">↕</button>
+            <div class="route-input">
+              <span class="route-dot destination-dot"></span>
+              <span class="route-destination-copy">
+                <span class="route-field-label">TO</span>
+                <input id="route-destination" type="text" placeholder="Search and select a place" readonly aria-label="Selected route destination">
+              </span>
+              <button class="origin-search-button" id="destination-search-button" type="button">Search</button>
+            </div>
+            <fieldset class="travel-mode-field">
+              <legend class="route-field-label">TRAVEL MODE</legend>
+              <input id="travel-mode" type="hidden" value="car">
+              <div class="travel-mode-options" role="group" aria-label="Travel mode">
+                <button class="travel-mode-option" type="button" data-mode="car" aria-pressed="true" aria-label="Car, available">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 11 1.5-5h11L19 11l2 2v5h-2v2h-3v-2H8v2H5v-2H3v-5l2-2Zm1 0h12M6 14h.01M18 14h.01"/></svg>
+                  <span>Car</span>
+                </button>
+                <button class="travel-mode-option" type="button" data-mode="motorcycle" aria-pressed="false" aria-label="Motorcycle, routing unavailable">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="3"/><circle cx="18" cy="16" r="3"/><path d="m6 16 4-6h4l4 6m-8-6-2-3H5m7 3 2 3h4m-5-3 2-3h3"/></svg>
+                  <span>Motorcycle</span>
+                </button>
+                <button class="travel-mode-option" type="button" data-mode="transit" aria-pressed="false" aria-label="Public transport, routing unavailable">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="16" rx="3"/><path d="M5 11h14M8 19l-2 2m10-2 2 2M8 7h.01M16 7h.01M8 15h.01M16 15h.01"/></svg>
+                  <span>Public transport</span>
+                </button>
+                <button class="travel-mode-option" type="button" data-mode="walking" aria-pressed="false" aria-label="Walking, routing unavailable">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14" cy="5" r="2"/><path d="m12 9-3 4 3 2 1 6m-4-8-3 3-3 1m8-5 4 3 3 1"/></svg>
+                  <span>Walking</span>
+                </button>
+                <button class="travel-mode-option" type="button" data-mode="heavy-vehicle" aria-pressed="false" aria-label="Heavy vehicle, routing unavailable">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h12v12H3zM15 11h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg>
+                  <span>Heavy vehicle</span>
+                </button>
+              </div>
+              <span class="travel-mode-note" id="travel-mode-note" aria-live="polite">Car routes use OSRM. Estimates do not include live traffic.</span>
+            </fieldset>
+            <div class="route-actions">
+              <button class="primary-button" id="calculate-route" type="submit" disabled>
+                <span class="route-button-label">Calculate route</span>
+                <span class="route-button-spinner" aria-hidden="true"></span>
+                <span aria-hidden="true">↗</span>
+              </button>
+              <button class="clear-route-button" id="clear-route" type="button" hidden>Clear route</button>
+            </div>
+          </form>
+          <div class="route-summary" id="route-summary" aria-live="polite" hidden>
+            <div class="route-summary-metrics">
+              <div><span class="eyebrow">DISTANCE</span><strong id="route-distance">—</strong></div>
+              <div><span class="eyebrow">ESTIMATED DRIVE</span><strong id="route-duration">—</strong></div>
+            </div>
+            <div class="route-summary-places">
+              <span id="route-summary-origin">Current location</span>
+              <span aria-hidden="true">↓</span>
+              <span id="route-summary-destination">Destination</span>
+            </div>
+          </div>
+          <div class="route-options" id="route-options" role="group" aria-label="Available routes" hidden></div>
+          <button class="start-navigation-button" id="start-navigation" type="button" hidden>
+            <span class="start-navigation-icon" aria-hidden="true">➤</span>
+            <span>Start navigation</span>
+          </button>
+          <section class="route-guidance" id="route-guidance" aria-labelledby="next-instruction-title" hidden>
+            <div class="next-instruction">
+              <span class="next-manoeuvre-icon" id="next-manoeuvre-icon" aria-hidden="true">↑</span>
+              <div class="next-instruction-copy">
+                <span class="eyebrow">UP NEXT</span>
+                <h3 id="next-instruction-title">Continue</h3>
+                <p id="next-instruction-road"></p>
+                <span class="next-instruction-distance" id="next-instruction-distance"></span>
+              </div>
+            </div>
+            <button class="instructions-toggle" id="instructions-toggle" type="button" aria-expanded="false" aria-controls="route-instructions">
+              <span>Turn-by-turn instructions</span>
+              <span class="instructions-count" id="instructions-count"></span>
+              <span class="instructions-chevron" aria-hidden="true">⌄</span>
+            </button>
+            <ol class="route-instructions" id="route-instructions" hidden></ol>
+          </section>
+          <p class="route-message" id="route-message" role="status" aria-live="polite">Choose a destination in search, then set your current location.</p>
+          <p class="route-disclaimer">Driving route preview · No live traffic information</p>
+        </aside>
+
+        <aside class="navigation-panel" id="navigation-panel" aria-label="Active route guidance" aria-live="polite" hidden>
+          <div class="navigation-panel-heading">
+            <span class="navigation-live-indicator"><span></span> ROUTE GUIDANCE</span>
+            <div class="navigation-panel-actions">
+              <button class="navigation-follow-button" id="navigation-follow" type="button" aria-label="Re-centre on your location and resume following" aria-pressed="true">Following</button>
+              <button class="navigation-end-button" id="end-navigation" type="button">End</button>
+            </div>
+          </div>
+          <div class="navigation-manoeuvre">
+            <span class="navigation-manoeuvre-icon" id="navigation-manoeuvre-icon" aria-hidden="true">↑</span>
+            <div class="navigation-manoeuvre-copy">
+              <strong id="navigation-instruction">Continue along the route</strong>
+              <span id="navigation-road">Road name unavailable</span>
+              <span id="navigation-distance-to-manoeuvre">Waiting for GPS location</span>
+            </div>
+          </div>
+          <div class="navigation-trip-metrics">
+            <div><span>REMAINING</span><strong id="navigation-remaining-distance">—</strong></div>
+            <div><span>EST. TIME</span><strong id="navigation-remaining-time">—</strong></div>
+          </div>
+          <p class="navigation-alert" id="navigation-alert" role="status" hidden></p>
+          <p class="navigation-approximation">Approximate route guidance · GPS accuracy may vary</p>
+        </aside>
+
+        <div class="map-footer">
+          <div class="map-status"><span class="status-pulse"></span> MAP PREVIEW <span class="status-divider">/</span> KUALA LUMPUR</div>
+          <div class="map-credits">Map data © OpenStreetMap contributors</div>
+        </div>
+      </section>
+
+      <div class="sidebar-scrim" id="sidebar-scrim" hidden></div>
+      <aside class="sidebar" id="sidebar" aria-label="Explore and nearby places">
+        <div class="sidebar-inner">
+          <section class="welcome-card" aria-labelledby="welcome-title">
+            <div class="welcome-overline"><span class="welcome-spark">✳</span> MADE FOR THE WAY HERE</div>
+            <h1 id="welcome-title">Every turn,<br><em>a little closer.</em></h1>
+            <p>A fresh perspective on finding your way around Malaysia.</p>
+            <div class="welcome-coordinate"><span>3°08' N</span><span class="coordinate-line"></span><span>101°41' E</span></div>
+          </section>
+
+          <section class="nearby-section" aria-labelledby="nearby-title">
+            <div class="section-heading">
+              <div>
+                <span class="eyebrow">EXPLORE AROUND YOU</span>
+                <h2 id="nearby-title">Nearby places</h2>
+              </div>
+              <span class="section-index">01 — 04</span>
+            </div>
+            <div class="category-grid" role="group" aria-label="Nearby place categories">
+              <button class="category-card" type="button" aria-pressed="false" data-category="petrol-stations">
+                <span class="category-icon petrol-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M3 21h14M7 7h6v5H7zM16 8h2l2 2v7a2 2 0 0 1-4 0v-3"/></svg></span>
+                <span class="category-name">Petrol stations</span>
+                <span class="category-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="category-card" type="button" aria-pressed="false" data-category="supermarkets">
+                <span class="category-icon market-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v11h16V10M3 10l2-7h14l2 7M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M9 21v-6h6v6"/></svg></span>
+                <span class="category-name">Supermarkets</span>
+                <span class="category-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="category-card" type="button" aria-pressed="false" data-category="rest-stops">
+                <span class="category-icon rest-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4m0 0h12v8H4m12-8v4a2 2 0 0 0 4 0V6m-4 6h2a2 2 0 0 1 2 2v6"/></svg></span>
+                <span class="category-name">R&amp;R</span>
+                <span class="category-arrow" aria-hidden="true">↗</span>
+              </button>
+              <button class="category-card" type="button" aria-pressed="false" data-category="restaurants">
+                <span class="category-icon food-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18m9-18v18m0-18a5 5 0 0 1 5 5v4h-5"/></svg></span>
+                <span class="category-name">Restaurants</span>
+                <span class="category-arrow" aria-hidden="true">↗</span>
+              </button>
+            </div>
+            <p class="places-note">Place discovery is a preview — live nearby listings aren't connected yet.</p>
+          </section>
+
+          <section class="journey-card" aria-labelledby="journey-title">
+            <div class="journey-mark" aria-hidden="true">
+              <svg viewBox="0 0 40 40"><path d="M8 31V9l12 9 12-9v22M8 9l12 9 12-9" /></svg>
+            </div>
+            <span class="eyebrow">GOOD TO KNOW</span>
+            <h2 id="journey-title">The journey<br>starts here.</h2>
+            <p>Map first. The rest, thoughtfully on its way.</p>
+            <span class="journey-index">J / 001</span>
+          </section>
+
+          <footer class="sidebar-footer">
+            <span>AN EARLY LOOK AT JALAN</span>
+            <span>MADE WITH <b>♥</b> IN MALAYSIA</span>
+          </footer>
+        </div>
+      </aside>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </main>
+  </body>
+</html>

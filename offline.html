@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f5f7f4">
+    <meta name="robots" content="noindex">
+    <title>Jalan — Offline</title>
+    <link rel="icon" href="assets/icons/mark.svg" type="image/svg+xml">
+    <style>
+      :root { color-scheme: light; font-family: "DM Sans", "Segoe UI", sans-serif; color: #182b26; background: #f5f7f4; }
+      * { box-sizing: border-box; }
+      body { display: grid; min-height: 100vh; min-height: 100dvh; place-items: center; margin: 0; padding: 24px; }
+      main { width: min(100%, 470px); }
+      .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; color: #182b26; font: 800 24px/1 "Segoe UI", sans-serif; letter-spacing: -1px; }
+      .brand img { width: 40px; height: 40px; }
+      .card { padding: clamp(24px, 7vw, 38px); border: 1px solid #e1e9e2; border-radius: 22px; background: #fff; box-shadow: 0 16px 48px #183a3014; }
+      .eyebrow { color: #176f55; font-size: 11px; font-weight: 700; letter-spacing: 1.6px; }
+      h1 { margin: 12px 0; font: 700 clamp(25px, 7vw, 34px)/1.15 "Segoe UI", sans-serif; letter-spacing: -1px; }
+      .intro { margin: 0; color: #52635c; font-size: 15px; line-height: 1.65; }
+      ul { display: grid; gap: 12px; margin: 24px 0; padding: 0; list-style: none; }
+      li { display: grid; grid-template-columns: 10px 1fr; gap: 10px; color: #52635c; font-size: 13px; line-height: 1.5; }
+      li::before { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #176f55; content: ""; }
+      .note { padding-top: 16px; border-top: 1px solid #edf0ed; color: #829087; font-size: 12px; line-height: 1.55; }
+      a { display: inline-flex; min-height: 46px; align-items: center; justify-content: center; margin-top: 22px; padding: 0 18px; border-radius: 11px; background: #176f55; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; }
+      a:focus-visible { outline: 3px solid #68b49a; outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand"><img src="assets/icons/mark.svg" alt=""> jalan.</div>
+      <section class="card" aria-labelledby="offline-title">
+        <span class="eyebrow">YOU'RE OFFLINE</span>
+        <h1 id="offline-title">Your way back is nearby.</h1>
+        <p class="intro">Jalan's app shell is available, but this page cannot load live navigation services without an internet connection.</p>
+        <ul>
+          <li>Live map tiles and map data need a network connection.</li>
+          <li>Place search and route calculations use online services.</li>
+          <li>Full offline maps and offline navigation are not available.</li>
+        </ul>
+        <p class="note">Reconnect to the internet to use the map, search places, and calculate routes. Your browser's network indicator does not guarantee that each service is reachable.</p>
+        <a href="./">Try Jalan again</a>
+      </section>
+    </main>
+  </body>
+</html>
