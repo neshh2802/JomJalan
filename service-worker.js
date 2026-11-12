@@ -1,17 +1,27 @@
-const CACHE_NAME = 'jalan-shell-v2';
 const APP_SCOPE = self.registration.scope;
+const APP_SCOPE_PATH = new URL(APP_SCOPE).pathname;
+const APP_SCOPE_KEY = APP_SCOPE_PATH
+  .replace(/^\/|\/$/g, '')
+  .replace(/[^a-z0-9]+/gi, '-')
+  .toLowerCase() || 'root';
+const CACHE_PREFIX = `jalan-shell-${APP_SCOPE_KEY}-`;
+const CACHE_NAME = `${CACHE_PREFIX}v7`;
 const SHELL_PATHS = [
   './',
   'index.html',
   'offline.html',
+  'privacy.html',
+  'terms.html',
   'style.css',
   'script.js',
   'api-config.js',
+  'privacy.js',
   'pwa.js',
   'manifest.webmanifest',
   'assets/icons/mark.svg',
   'assets/icons/icon-192.png',
   'assets/icons/icon-512.png',
+  'assets/vendor/maplibre-gl/maplibre-bootstrap.js',
 ];
 const SHELL_URLS = SHELL_PATHS.map(path => new URL(path, APP_SCOPE).href);
 const SHELL_URL_SET = new Set(SHELL_URLS);
@@ -35,7 +45,10 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames
-      .filter(name => name.startsWith('jalan-shell-') && name !== CACHE_NAME)
+      .filter(name =>
+        (name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME) ||
+        (APP_SCOPE_PATH === '/' && /^jalan-shell-v\d+$/.test(name))
+      )
       .map(name => caches.delete(name)));
     await self.clients.claim();
   })());

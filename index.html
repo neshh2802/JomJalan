@@ -14,12 +14,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+    <link href="assets/vendor/maplibre-gl/maplibre-gl.css" rel="stylesheet" integrity="sha384-S+OnE5M4U3Qc2nR0RgljGrVs06xqfRg8L7uFk/pOF5+sRuSDG4oKkqKZmFrx7w09" crossorigin="anonymous">
+    <link rel="modulepreload" href="assets/vendor/maplibre-gl/maplibre-gl.mjs" integrity="sha384-a0WFg//OZ1mIoa/89oWDtpITcNC8nwWZc6ePF9HEdQliLWM+cSQvj32wBTFtDj79" crossorigin="anonymous">
+    <link rel="modulepreload" href="assets/vendor/maplibre-gl/maplibre-gl-shared.mjs" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous">
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" defer></script>
-    <script src="api-config.js" defer></script>
-    <script src="script.js" defer></script>
-    <script src="pwa.js" defer></script>
+    <script type="module" src="assets/vendor/maplibre-gl/maplibre-bootstrap.js" integrity="sha384-obrEJ5ivZSjIiTWXyPhNY0WPuiixFObHdL3hO3BaGiO1KHY1b3A5rQwFuOyHchJE" crossorigin="anonymous"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -39,12 +38,13 @@
           <form class="search-bar" id="search-form" role="search" aria-busy="false">
             <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2"/></svg>
             <label class="sr-only" for="place-search">Search a place or address</label>
-            <input id="place-search" type="search" role="combobox" placeholder="Where do you want to go?" autocomplete="off" aria-autocomplete="list" aria-haspopup="listbox" aria-controls="search-results" aria-expanded="false">
+            <input id="place-search" type="search" maxlength="200" role="combobox" placeholder="Where do you want to go?" autocomplete="off" aria-autocomplete="list" aria-haspopup="listbox" aria-controls="search-results" aria-describedby="search-privacy-note" aria-expanded="false">
             <span class="search-hint" aria-hidden="true">⌘ K</span>
             <button class="search-submit" type="submit" aria-label="Search">
               <svg class="search-submit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
               <span class="search-spinner" aria-hidden="true"></span>
             </button>
+            <p class="search-privacy-note" id="search-privacy-note">Search terms are sent to the public Nominatim geocoder. See our <a href="privacy.html">Privacy Policy</a>.</p>
             <div class="search-results" id="search-results" role="listbox" aria-label="Malaysian places" hidden></div>
           </form>
           <span class="sr-only" id="search-status" role="status" aria-live="polite"></span>
@@ -77,6 +77,7 @@
         </div>
 
         <aside class="tracking-panel" aria-label="Live location tracking">
+          <p class="tracking-privacy-note">GPS is used after you choose a location feature. Map requests may reveal the viewed area; route coordinates are sent only when you calculate a route.</p>
           <div class="tracking-status" role="status" aria-live="polite">
             <span class="tracking-status-dot" id="tracking-status-dot" aria-hidden="true"></span>
             <span id="tracking-status">Tracking is off</span>
@@ -148,6 +149,7 @@
               </div>
               <span class="travel-mode-note" id="travel-mode-note" aria-live="polite">Car routes use OSRM. Estimates do not include live traffic.</span>
             </fieldset>
+            <p class="route-privacy-note">Selecting <strong>Calculate route</strong> sends both endpoint coordinates to the public OSRM routing service. A device location is included if selected as an endpoint. Starting navigation requests continuous location while this page is visible; map tiles may reveal the viewed area. <a href="privacy.html">Privacy details</a>.</p>
             <div class="route-actions">
               <button class="primary-button" id="calculate-route" type="submit" disabled>
                 <span class="route-button-label">Calculate route</span>
@@ -280,6 +282,10 @@
           <footer class="sidebar-footer">
             <span>AN EARLY LOOK AT JALAN</span>
             <span>MADE WITH <b>♥</b> IN MALAYSIA</span>
+            <nav class="legal-links" aria-label="Legal information">
+              <a href="privacy.html">Privacy Policy</a>
+              <a href="terms.html">Terms and Conditions</a>
+            </nav>
           </footer>
         </div>
       </aside>

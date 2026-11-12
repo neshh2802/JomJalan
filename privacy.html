@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7f4">
+    <meta name="robots" content="noindex">
+    <title>Privacy Policy — Jalan</title>
+    <link rel="icon" href="assets/icons/mark.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="legal-layout">
+      <article class="legal-content">
+        <a class="legal-brand" href="./"><img src="assets/icons/mark.svg" alt=""> jalan.</a>
+        <h1>Privacy Policy</h1>
+        <p class="legal-updated">Effective date: 12 November 2026 · Draft for operator and Malaysian legal review</p>
+        <p class="placeholder"><strong>Operator details required before publication:</strong> Jalan is currently a project name. Replace this notice with the operator's legal name, address, and privacy contact before public release. This draft is not legal advice or a claim of compliance certification.</p>
+
+        <h2>1. About this policy</h2>
+        <p>This notice describes data handled by the Jalan browser application based on its current implementation. Jalan is a navigation prototype with no user accounts or operator-operated application API identified in the reviewed project. The hosting operator and its server-log practices have not been identified. Independent map, geocoding, routing, browser, and hosting providers handle their own network and service data under their own terms and policies.</p>
+
+        <h2>2. Information handled by Jalan</h2>
+        <ul>
+          <li><strong>Search queries and results:</strong> when you submit a place search, the query is sent to the public Nominatim geocoder. Results and any selected place coordinates remain in the current page's memory while used. The application does not implement a persistent search history.</li>
+          <li><strong>Location:</strong> Jalan calls the browser Geolocation API only after you choose a location-related action, such as Use my location, Re-centre, Start tracking, or Start navigation. A one-time fix or active GPS fixes are held in page memory for the map and approximate guidance. The application code does not write a location history to persistent storage.</li>
+          <li><strong>Route endpoints:</strong> selecting Calculate route sends the origin and destination coordinates to the public OSRM demo routing service. If you chose device location as an endpoint, that coordinate is included. This is a user-initiated transfer; route results are held in page memory and are not saved as route history.</li>
+          <li><strong>Map viewport:</strong> the map loads its style and map tiles from OpenFreeMap. The provider receives requests for the map area being displayed. When you move or follow the map to a device location, tile requests can disclose the approximate viewed area to the map provider. GPS fixes are not otherwise sent by Jalan's tracking code to that provider.</li>
+          <li><strong>Technical request data:</strong> network providers normally receive request metadata such as IP address, time, requested URL, browser/network headers, and referrer information as part of delivering a request. Jalan does not receive or control the provider's server logs. The actual metadata retained by each provider is not verified by Jalan.</li>
+        </ul>
+
+        <h2>3. Location permission and control</h2>
+        <p>Location permission is requested only after a location-related action. No location watcher starts automatically on page load, and Jalan does not implement background location tracking. A GPS watcher is stopped when you stop tracking or end navigation. Ending navigation clears live tracking state but preserves the selected route preview, including its endpoint in page memory, until the route is cleared or the page is reloaded.</p>
+        <p>Location fixes are processed on your device for map display and approximate progress. Choosing Calculate route transmits endpoint coordinates to OSRM. Showing or following a location can also cause OpenFreeMap to receive requests for tiles covering the displayed area. Browser and operating-system permission controls are managed by your browser/device; Jalan cannot revoke a previously granted browser permission from webpage code.</p>
+        <div class="privacy-tools">
+          <p><strong>Location permission status:</strong> <span id="location-permission-state">Checking browser support…</span></p>
+          <button id="check-location-permission" type="button">Check permission status</button>
+          <p id="privacy-tools-status" role="status" aria-live="polite"></p>
+          <button id="clear-app-data" type="button">Clear Jalan offline app data</button>
+          <p>Clearing removes Jalan's versioned app-shell cache and unregisters Jalan's service worker for this app folder. It does not erase browser history, provider logs, browser/OS location permission, the browser's general HTTP cache, or data belonging to other apps.</p>
+        </div>
+
+        <h2>4. Storage, cookies, and retention</h2>
+        <p>The reviewed Jalan application does not use cookies, localStorage, sessionStorage, IndexedDB, or an account database to store search history, routes, or location history. It uses the browser Cache API through its service worker to store the application shell for PWA/offline fallback. That cache contains app files, not search or routing responses or GPS fixes. Browser-managed HTTP caches and permission records are separate and are controlled by the browser.</p>
+        <p>Transient search text, selected endpoints, route results, and GPS fixes remain in page memory as needed and are ordinarily discarded when the page is closed or reloaded, except for browser/device-managed state. Jalan has no verified access to or control over hosting or third-party retention. Consult each provider's current policy for its practices.</p>
+
+        <h2>5. External services and transfers</h2>
+        <ul>
+          <li><strong>Nominatim / OpenStreetMap Foundation:</strong> receives the submitted search text (in the request URL) and normal request metadata. Search is user-submitted to <a href="https://nominatim.openstreetmap.org/">nominatim.openstreetmap.org</a>. The OSMF privacy policy describes automatic records including IP, browser/device type, operating system, referrer, timestamps, and accessed pages. Because the query is in the URL, it may appear in request/accessed-page records; retention for this exact API path is not established. OSMF may operate interaction analytics and says Piwik IP addresses are shortened and detailed Piwik usage is retained 180 days, but Jalan has not verified whether that analytics applies to this API traffic. See the <a href="https://operations.osmfoundation.org/policies/nominatim/">Nominatim usage policy</a> and <a href="https://osmfoundation.org/wiki/Privacy_Policy">OSMF privacy policy</a>. The usage policy asks users not to submit personal or confidential material.</li>
+          <li><strong>OSRM public demo:</strong> receives both route endpoint coordinates and normal request metadata when you calculate a supported driving route. The configured endpoint is <a href="https://router.project-osrm.org/">router.project-osrm.org</a>. The public demo is best-effort, may change or withdraw access, and is not controlled by Jalan. See <a href="https://github.com/Project-OSRM/osrm-backend/wiki/Api-usage-policy">OSRM demo-server guidance</a>.</li>
+          <li><strong>OpenFreeMap and map data:</strong> the style and map resources are loaded from <a href="https://tiles.openfreemap.org/styles/liberty">tiles.openfreemap.org</a>; the reviewed style references the same tile host for vector/raster tiles, sprites, and glyphs. OpenFreeMap's privacy policy checked 12 November 2026 says default access logs omit IP but include browser type, referrer, date/time, and OS; error logs may include IP and URL (stated 7-day deletion), and incident response may enable IP logging for up to 30 days. The provider also says it may use Cloudflare. These are provider statements, not independently audited. See its <a href="https://openfreemap.org/">service description</a>, <a href="https://openfreemap.org/privacy/">privacy policy</a>, and <a href="https://openfreemap.org/tos/">terms</a>.</li>
+          <li><strong>OpenStreetMap:</strong> provides map data and attribution, not an additional map-tile endpoint in the current app configuration. See <a href="https://www.openstreetmap.org/copyright">OpenStreetMap copyright and data licensing</a>. Links to OpenStreetMap pages are followed only when you activate them.</li>
+          <li><strong>Hosting provider:</strong> serves Jalan's pinned MapLibre GL JS 6.18.0 JavaScript, worker, and CSS files from the same origin as the app. Requests disclose ordinary technical metadata to the deployment host. MapLibre is not loaded from a separate package CDN in this version.</li>
+          <li><strong>Google Fonts:</strong> the page requests font stylesheets from <code>fonts.googleapis.com</code> and font files from <code>fonts.gstatic.com</code>. See <a href="https://policies.google.com/privacy">Google's privacy policy</a>.</li>
+          <li><strong>Hosting provider:</strong> the deployment host serves Jalan's own files and may process request metadata in its infrastructure. The actual host, region, logs, retention, and subprocessors are not specified in this project and must be completed by the operator before publication.</li>
+          <li><strong>Browser and device:</strong> geolocation is provided by the browser/operating system and its configured location sources. Their processing is governed by their own providers' terms and settings, not controlled by Jalan.</li>
+        </ul>
+        <p>External services may receive data in other countries. The deployment geography and OSRM retention and transfer practices have not been established, and the documented provider statements have not been independently audited. Do not send sensitive, confidential, or identifying search text.</p>
+
+        <h2>6. Sharing, advertising, and analytics</h2>
+        <p>The reviewed code contains no Jalan account system, advertising tracker, analytics SDK, or operator API that receives search or location data. This does not mean that independent providers receive no request data; they receive the information described above to fulfil requests. No additional recipients should be added without updating this notice and reviewing the transfer.</p>
+
+        <h2>7. Security and deletion</h2>
+        <p>Jalan avoids persistent storage of precise location, search history, and routes, uses HTTPS for configured external services, validates coordinates before route requests, and does not cache external API responses in its service worker. These measures reduce some risks but do not guarantee security. Data already transmitted to an independent provider cannot be deleted by Jalan; contact that provider under its own procedures. To clear browser-managed data, use the in-page control above and the browser/device's site-data and permission settings.</p>
+
+        <h2>8. Your choices and rights</h2>
+        <p>You may decline location permission, avoid submitting searches, choose not to calculate a route, stop tracking, clear the route, clear Jalan's offline cache, or change browser/device permissions. Depending on the operator's identity, your location, and applicable law, you may have rights to access, correct, withdraw consent, request deletion, or complain to the relevant authority. The responsible operator must provide a working contact and confirm the applicable process before publication.</p>
+
+        <h2>9. Children</h2>
+        <p>Jalan is a general navigation prototype and is not designed to collect information from children. The operator has not established a child-specific account or consent process. A guardian should supervise a child's use of location features. The operator must obtain legal advice on any obligations that apply before public release.</p>
+
+        <h2>10. Malaysian privacy law and international transfers</h2>
+        <p>This draft is intended for review against the Malaysian Personal Data Protection Act 2010 and applicable amendments and regulations. It does not determine whether, how, or to whom those laws apply. The operator must assess its role, purposes, notices, legal bases/consents, security, retention, data-subject requests, breach duties, and cross-border transfer obligations with qualified Malaysian counsel. No legal certification is claimed.</p>
+
+        <h2>11. Changes and contact</h2>
+        <p>This notice should be updated if providers, data flows, storage, or the operator change. The operator must publish an effective date and notify users appropriately for material changes.</p>
+        <p class="placeholder"><strong>Privacy contact:</strong> [Insert operator's legal name, postal address, and monitored privacy email/contact method before publication.]</p>
+        <a class="legal-back" href="./">Back to Jalan</a>
+      </article>
+    </main>
+    <script src="privacy.js" defer></script>
+  </body>
+</html>

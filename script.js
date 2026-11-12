@@ -3,6 +3,7 @@ const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const SEARCH_DEBOUNCE_MS = 350;
 const NOMINATIM_MIN_INTERVAL_MS = 1100;
+const MAX_SEARCH_QUERY_LENGTH = 200;
 const SEARCH_LIMIT = 8;
 const ROUTE_SOURCE_ID = 'jalan-driving-route';
 const ROUTE_CASING_LAYER_ID = 'jalan-driving-route-casing';
@@ -10,6 +11,7 @@ const ROUTE_LINE_LAYER_ID = 'jalan-driving-route-line';
 const MAX_TRACKING_ACCURACY_METERS = 100;
 const MAX_FOLLOW_UPDATE_INTERVAL_MS = 1500;
 const FOLLOW_DISTANCE_THRESHOLD_METERS = 25;
+const MAP_ERROR_NOTICE_INTERVAL_MS = 10000;
 
 const elements = {
   app: document.querySelector('.app-shell'),
@@ -95,10 +97,9 @@ let searchRequestId = 0;
 let activeResultIndex = -1;
 let searchTarget = 'destination';
 let navigationActive = false;
-let navigationOwnsTracking = false;
-let navigationPreviousFollowMode = false;
 let navigationProgressMeters = 0;
 let arrivalAnnounced = false;
+let lastMapErrorNoticeAt = 0;
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -129,13 +130,19 @@ function initializeMap() {
     minZoom: 4,
     maxZoom: 19,
     attributionControl: false,
+    trackResize: true,
   });
 
   map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'bottom-right');
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
   map.on('error', event => {
     if (event.error) {
-      console.error('Map rendering error:', event.error.message);
+      const now = Date.now();
+      if (now - lastMapErrorNoticeAt >= MAP_ERROR_NOTICE_INTERVAL_MS) {
+        lastMapErrorNoticeAt = now;
+        console.error('Map data failed to load. Check connectivity and provider status.');
+        showToast("Some map data couldn't load. Check your connection and try again.");
+      }
     }
   });
   map.on('dragstart', disableFollowAfterMapInteraction);
@@ -200,13 +207,19 @@ function setupSearch() {
       elements.searchInput.focus();
       return;
     }
+    if (query.length > MAX_SEARCH_QUERY_LENGTH) {
+      const message = `Search is limited to ${MAX_SEARCH_QUERY_LENGTH} characters.`;
+      renderSearchMessage(message, 'error');
+      elements.searchStatus.textContent = message;
+      return;
+    }
     scheduleSearch(query);
   });
 
   elements.searchInput.addEventListener('keydown', handleSearchKeydown);
   elements.searchInput.addEventListener('input', () => {
     if (navigationActive) {
-      endNavigation(false, 'Navigation ended because the directions were changed.');
+      endNavigation('Navigation ended because the directions were changed.');
     }
     if (searchTarget === 'origin') {
       currentLocation = null;
@@ -311,16 +324,26 @@ async function searchPlaces(query, requestId) {
     if (requestId !== searchRequestId) {
       return;
     }
+    if (!Array.isArray(places)) {
+      const error = new Error('Nominatim returned an unexpected response.');
+      error.code = 'InvalidResponse';
+      throw error;
+    }
     renderSearchResults(places);
   } catch (error) {
     if (requestId !== searchRequestId || (error.name === 'AbortError' && !timedOut)) {
       return;
     }
-    console.error('Place search failed:', error);
+    console.error('Place search failed:', {
+      name: error.name,
+      status: error.status,
+    });
     const message = timedOut
       ? 'Search took too long. Check your connection and try again.'
       : error.status === 429
         ? 'Search is busy right now. Please wait a moment and try again.'
+        : error.name === 'SyntaxError' || error.code === 'InvalidResponse'
+          ? 'Search returned an unexpected response. Please try again later.'
         : "We couldn't load places. Check your connection and try again.";
     renderSearchMessage(message, 'error');
     elements.searchStatus.textContent = message;
@@ -341,7 +364,11 @@ function renderSearchResults(places) {
 
   const validPlaces = Array.isArray(places)
     ? places.filter(
-        place => isValidCoordinate(place.lat, -90, 90) && isValidCoordinate(place.lon, -180, 180)
+        place =>
+          place &&
+          typeof place === 'object' &&
+          isValidCoordinate(place.lat, -90, 90) &&
+          isValidCoordinate(place.lon, -180, 180)
       )
     : [];
 
@@ -565,7 +592,7 @@ function selectSearchResult(place) {
     address: labels.address,
   };
   if (navigationActive) {
-    endNavigation(false, 'Navigation ended because the directions were changed.');
+    endNavigation('Navigation ended because the directions were changed.');
   }
   if (selectedTarget === 'origin') {
     currentLocation = selectedPlace;
@@ -796,7 +823,7 @@ function setupRoutePlanner() {
         return;
       }
       if (navigationActive) {
-        endNavigation(false, 'Navigation ended because the travel mode changed.');
+        endNavigation('Navigation ended because the travel mode changed.');
       }
       elements.travelMode.value = mode;
       elements.travelModeOptions.forEach(option => {
@@ -807,7 +834,7 @@ function setupRoutePlanner() {
       }
       const isSupported = mode === 'car';
       elements.travelModeNote.textContent = isSupported
-        ? 'Car routes use OSRM. Estimates do not include live traffic.'
+        ? 'Car routes use OSRM. Calculating sends both endpoint coordinates to the routing service.'
         : 'Routing for this mode is not connected yet. No route estimate will be shown.';
       setRouteMessage(isSupported
         ? 'Car routing is ready.'
@@ -835,8 +862,6 @@ function startNavigation() {
   }
   navigationActive = true;
   notifyNavigationStateChange(true);
-  navigationOwnsTracking = trackingWatchId === null;
-  navigationPreviousFollowMode = followMode;
   navigationProgressMeters = 0;
   arrivalAnnounced = false;
   elements.navigationAlert.hidden = true;
@@ -852,7 +877,7 @@ function startNavigation() {
   if (trackingWatchId === null) {
     startLocationTracking();
     if (trackingWatchId === null) {
-      endNavigation(false, 'Location tracking could not start. Allow GPS access and try again.');
+      endNavigation('Location tracking could not start. Allow GPS access and try again.');
       return;
     }
   } else {
@@ -863,16 +888,12 @@ function startNavigation() {
   }
 }
 
-function endNavigation(stopOwnedTracking = true, message = '') {
+function endNavigation(message = '') {
   if (!navigationActive) {
     return;
   }
-  const shouldStopTracking = stopOwnedTracking && navigationOwnsTracking;
-  const restoreFollowMode = navigationPreviousFollowMode;
   navigationActive = false;
   notifyNavigationStateChange(false);
-  navigationOwnsTracking = false;
-  navigationPreviousFollowMode = false;
   navigationProgressMeters = 0;
   arrivalAnnounced = false;
   elements.navigationPanel.hidden = true;
@@ -881,10 +902,8 @@ function endNavigation(stopOwnedTracking = true, message = '') {
   elements.trackingPanel.hidden = false;
   elements.routeToggle.disabled = false;
   elements.app.classList.remove('navigation-active');
-  if (shouldStopTracking && trackingWatchId !== null) {
+  if (trackingWatchId !== null) {
     stopLocationTracking();
-  } else if (trackingWatchId !== null) {
-    setFollowMode(restoreFollowMode);
   }
   if (message) {
     setRouteMessage(message, 'info');
@@ -1048,7 +1067,7 @@ function swapRouteEndpoints() {
     return;
   }
   if (navigationActive) {
-    endNavigation(false, 'Navigation ended because the directions were changed.');
+    endNavigation('Navigation ended because the directions were changed.');
   }
   const previousOrigin = currentLocation;
   currentLocation = selectedDestination;
@@ -1095,26 +1114,32 @@ function setRouteMessage(message, state = 'info') {
 
 function requestCurrentLocation() {
   return new Promise((resolve, reject) => {
+    if (!window.JALAN_PRIVACY) {
+      reject(new Error('Privacy controls are unavailable. Reload Jalan and try again.'));
+      return;
+    }
     if (!navigator.geolocation) {
       reject(new Error("Location isn't available in this browser."));
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        if (
-          !isValidCoordinate(coords.latitude, -90, 90) ||
-          !isValidCoordinate(coords.longitude, -180, 180)
-        ) {
-          reject(new Error('Your device returned invalid location coordinates. Try again.'));
-          return;
-        }
+    window.JALAN_PRIVACY.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 12000,
+      maximumAge: 30000,
+    }).then(({ coords }) => {
+      if (
+        !isValidCoordinate(coords.latitude, -90, 90) ||
+        !isValidCoordinate(coords.longitude, -180, 180)
+      ) {
+        reject(new Error('Your device returned invalid location coordinates. Try again.'));
+        return;
+      }
 
-        const coordinates = [coords.longitude, coords.latitude];
-        setLocationMarker(coordinates);
-        resolve({ coordinates, name: 'Current location' });
-      },
-      error => {
+      const coordinates = [coords.longitude, coords.latitude];
+      setLocationMarker(coordinates);
+      resolve({ coordinates, name: 'Current location' });
+    }).catch(error => {
         const message =
           error.code === error.PERMISSION_DENIED
             ? 'Location permission was denied. Allow location access in your browser and try again.'
@@ -1122,9 +1147,7 @@ function requestCurrentLocation() {
               ? "Your device couldn't determine your location. Check its location settings and try again."
               : 'Finding your location took too long. Try again when you have a clear signal.';
         reject(new Error(message));
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
-    );
+    });
   });
 }
 
@@ -1228,7 +1251,11 @@ async function calculateRoute() {
     if (error.name === 'AbortError') {
       setRouteMessage('Route calculation timed out. Please try again.', 'error');
     } else {
-      console.error('Route calculation failed:', error);
+      console.error('Route calculation failed:', {
+        name: error.name,
+        status: error.status,
+        code: error.code,
+      });
       setRouteMessage(getRouteErrorMessage(error), 'error');
     }
   } finally {
@@ -1242,7 +1269,12 @@ async function calculateRoute() {
 }
 
 function validateRouteResponse(data) {
-  if (!data || data.code !== 'Ok' || !Array.isArray(data.routes) || data.routes.length === 0) {
+  if (!data || typeof data !== 'object' || !Array.isArray(data.routes)) {
+    const error = new Error('The route service returned an unexpected response.');
+    error.code = 'InvalidResponse';
+    throw error;
+  }
+  if (data.code !== 'Ok' || data.routes.length === 0) {
     const error = new Error('No driving route was found.');
     error.code = data?.code || 'NoRoute';
     throw error;
@@ -1250,7 +1282,9 @@ function validateRouteResponse(data) {
 
   const primaryRoute = validateRoute(data.routes[0]);
   if (!primaryRoute) {
-    throw new Error('The route service returned invalid route data.');
+    const error = new Error('The route service returned invalid route data.');
+    error.code = 'InvalidResponse';
+    throw error;
   }
   return [
     primaryRoute,
@@ -1299,6 +1333,9 @@ function getRouteErrorMessage(error) {
     return "The route service couldn't calculate this route. Check the selected locations and try again.";
   }
   if (error.name === 'SyntaxError') {
+    return 'The route service returned an invalid response. Please try again later.';
+  }
+  if (error.code === 'InvalidResponse') {
     return 'The route service returned an invalid response. Please try again later.';
   }
   if (error.code === 'NoRoute' || error.code === 'NoSegment') {
@@ -1396,7 +1433,7 @@ async function selectRoute(index) {
   }
   selectedRouteIndex = index;
   if (navigationActive) {
-    endNavigation(false, 'Navigation ended because the selected route changed.');
+    endNavigation('Navigation ended because the selected route changed.');
   }
   const route = calculatedRoutes[index];
   const routeSource = map.getSource(ROUTE_SOURCE_ID);
@@ -1724,6 +1761,25 @@ function setupGeolocation() {
       elements.locateButton.disabled = false;
     }
   });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden' || trackingWatchId === null) {
+      return;
+    }
+    if (navigationActive) {
+      endNavigation('Navigation ended because Jalan moved to the background. Start it again when ready.');
+    } else {
+      stopLocationTracking('Tracking stopped because Jalan moved to the background.');
+    }
+  });
+
+  window.addEventListener('pagehide', () => {
+    if (navigationActive) {
+      endNavigation('Navigation ended because Jalan was closed or left.');
+    } else if (trackingWatchId !== null) {
+      stopLocationTracking('Tracking stopped because Jalan was closed or left.');
+    }
+  });
 }
 
 function startLocationTracking() {
@@ -1741,7 +1797,11 @@ function startLocationTracking() {
 
   setTrackingStatus('Requesting location permission…', 'loading');
   try {
-    const watchId = navigator.geolocation.watchPosition(
+    if (!window.JALAN_PRIVACY) {
+      setTrackingStatus('Privacy controls are unavailable. Reload Jalan before using location.', 'error');
+      return;
+    }
+    const watchId = window.JALAN_PRIVACY.watchPosition(
       handleTrackingPosition,
       handleTrackingError,
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
@@ -1902,7 +1962,7 @@ function handleTrackingError(error) {
       'error'
     );
     if (navigationActive) {
-      endNavigation(false, message);
+      endNavigation(message);
     }
     return;
   }
@@ -1917,8 +1977,8 @@ function handleTrackingError(error) {
 }
 
 function stopLocationTracking(message = 'Tracking is off.', state = 'idle') {
-  if (trackingWatchId !== null && navigator.geolocation) {
-    navigator.geolocation.clearWatch(trackingWatchId);
+  if (trackingWatchId !== null && window.JALAN_PRIVACY) {
+    window.JALAN_PRIVACY.clearLocationWatch(trackingWatchId);
   }
   trackingWatchId = null;
   trackedPosition = null;

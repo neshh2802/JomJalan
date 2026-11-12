@@ -1,3 +1,38 @@
+# Jalan — Milestone 9.1: Vercel Deployment Configuration
+
+## Overview
+
+Prepared the static Jalan project for Vercel using the existing HTML, CSS, vanilla JavaScript, MapLibre, and PWA architecture. No deployment was performed, no UI/navigation code was changed, and no new dependencies were introduced.
+
+## Implemented
+
+- Added [vercel.json](./vercel.json) for Vercel's static "Other" project mode, with no build framework or route rewrites.
+- Added an enforcing CSP scoped to the verified runtime origins: same-origin assets, Google Fonts, OpenFreeMap, Nominatim, and OSRM. MapLibre inline style attributes are permitted; external scripts, objects, and frames remain disallowed.
+- Added `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options`, and one-year HSTS without `includeSubDomains` or preload.
+- Set HTML, legal/offline pages, the service worker, and the web manifest to revalidate. Set the `.webmanifest` response MIME type explicitly.
+- Updated [SECURITY.md](./SECURITY.md) and [SECURITY_TEST_REPORT.md](./SECURITY_TEST_REPORT.md) with the policy, evidence, and deployment-dependent limitations.
+
+## Files changed
+
+- Created: `vercel.json`.
+- Updated: `SECURITY.md`, `SECURITY_TEST_REPORT.md`, `REPORT.md`.
+- No application, navigation, service-worker, manifest, or dependency files were changed for this milestone.
+
+## Verification
+
+- Parsed `vercel.json` and checked key rule structure, CSP presence, manifest MIME, and revalidation rules. Inspected the official Vercel schema's nullable `framework` and header-rule shape; Vercel CLI validation was not run.
+- Served the project locally with a test server applying the configured response-header values. The browser loaded Jalan, the MapLibre worker/style and OpenFreeMap map tiles without CSP violations or runtime errors.
+- Confirmed mocked browser requests to Nominatim and OSRM origins passed the configured CSP and returned the fixture responses. Search/route UI actions were not rerun in this Vercel-header pass; prior mocked regression results remain separately documented.
+- Confirmed the manifest returned HTTP 200 with `application/manifest+json` and the service worker registered and activated.
+
+## Not tested and next steps
+
+- No Vercel deployment or preview was created. Platform routing, actual response-header merging, HTTPS redirects, HSTS behavior, static asset MIME/caching, and CSP must be verified on an approved preview before production.
+- Live search/routing, actual device geolocation permission, and installed/offline PWA behavior were not retested in this pass. Do not treat the local simulation as provider, device, or deployment certification.
+- Create an authorized Vercel preview, exercise search/route/GPS/PWA flows, inspect browser CSP violations and deployed headers, and then address remaining legal/provider review items before production.
+
+---
+
 # Jalan — Milestone 7: Cross-Platform Architecture & PWA Foundation
 
 ## Overview
@@ -8,7 +43,7 @@ Milestone 7 adds an installable, folder-relative PWA shell around Jalan's existi
 
 - Added a standalone web manifest with Jalan name, `./` start URL and scope, portrait/landscape support, existing theme/background colors, and 192px/512px any-purpose and maskable PNG icons based on the Jalan route-mark.
 - Added a versioned service worker that precaches only same-origin application-shell files, removes obsolete Jalan shell caches at activation, and serves a small offline fallback for failed page navigations.
-- MapLibre, fonts, external map data/tiles, Nominatim, OSRM, and location data are not cached by the service worker. Search and route errors continue through their existing online-service handling.
+- Vendored MapLibre files, fonts, external map data/tiles, Nominatim, OSRM, and location data are not cached by the service worker. Search and route errors continue through their existing online-service handling.
 - Added an install action that uses `beforeinstallprompt` after an explicit user click where supported and shows browser-specific installation guidance otherwise. Installed mode and `appinstalled` hide the action; dismissal does not trigger repeated automatic prompts.
 - Added online/offline browser status. Its copy distinguishes cached app shell from live map, search, and route services and cautions that “online” does not guarantee individual services are reachable.
 - Added update detection and an explicit **Update Jalan** action. Updates wait for user confirmation; an accepted update waits until navigation ends before activating and reloading.
@@ -61,6 +96,98 @@ These are local and browser-emulated checks, not physical-device or live-service
 ## Recommended next milestone
 
 Validate installation and secure-context behavior on physical iOS and Android devices, then evaluate native packaging only if product requirements call for capabilities beyond the responsive PWA.
+
+---
+
+# Jalan — Privacy Inventory and Enforcement Follow-up
+
+## Overview
+
+This privacy-focused phase addresses the disclosure gap identified during the security review. It preserves the existing static HTML, CSS, vanilla JavaScript, MapLibre, geocoding, routing, and PWA architecture. No Capacitor/native integration, AI feature, analytics, advertising tracker, or new framework was introduced.
+
+## Features and documentation
+
+- Added [privacy.js](./privacy.js) to centralize explicit geolocation calls, permission-state reporting, non-persistence defaults, and user-initiated clearing of Jalan's scoped shell caches/service worker.
+- Added point-of-use notices for search, route calculation, and location controls. Search input is limited to 200 characters; over-limit input is rejected before a Nominatim request.
+- Added [privacy.html](./privacy.html) and [terms.html](./terms.html), linked from the app. Operator identity/contact and other unverified legal details remain clearly marked placeholders for Malaysian legal review.
+- Updated location lifecycle handling so navigation end, explicit stop, and page-background/leave events clear the active GPS watch. Route preview stays in transient page memory; location/search/route history is not written to app storage.
+- Updated the service-worker shell allowlist to include the legal/privacy resources; search, routing, map tiles, and GPS are not cached.
+- Documented data flows, request recipients, triggers, retention unknowns, trust boundaries, and provider references in [PRIVACY_DATA_INVENTORY.md](./PRIVACY_DATA_INVENTORY.md); added [SECURITY.md](./SECURITY.md), [THREAT_MODEL.md](./THREAT_MODEL.md), and [SECURITY_TEST_REPORT.md](./SECURITY_TEST_REPORT.md).
+
+## Files created or modified
+
+- Created: `privacy.js`, `privacy.html`, `terms.html`, `PRIVACY_DATA_INVENTORY.md`, `SECURITY.md`, `THREAT_MODEL.md`, `SECURITY_TEST_REPORT.md`.
+- Modified: `index.html`, `script.js`, `style.css`, `service-worker.js`, `REPORT.md`.
+
+## Verification
+
+- Mocked browser checks confirmed no geolocation request on app load; location access followed a user action; permission denial was surfaced; search and route calls occurred only after explicit submit/calculation; and an over-limit search generated no request.
+- Mocked malicious HTML-shaped search results rendered as text rather than executable markup.
+- Mocked route calculation sent the selected endpoints to OSRM only on calculation. Starting navigation used one GPS watch; ending it cleared the watch and preserved route preview. Explicit stop and a simulated hidden-page event also cleared the active watch.
+- The clear-local-data control removed Jalan's scope-specific cache entries and unregistered the service worker. Search and route history were not persisted in browser app storage.
+- At 390×844, 768×900, and 1440×900, app, privacy, and terms page layouts had no horizontal overflow. Search disclosure/results overlap found during testing was corrected.
+- Local HTTP checks returned 200 for the app, legal pages, privacy module, service worker, and security/privacy documentation. Static checks found no duplicate IDs or buttons lacking an explicit type. Final JavaScript syntax, manifest JSON, and icon dimension checks passed.
+- All search, route, and geolocation behavior tests used mocks. No hostile requests were sent to external providers.
+
+## Known issues and outstanding verification
+
+- The legal pages are drafts, not legal advice or proof of compliance. Replace placeholders and obtain qualified Malaysian legal review before publication.
+- Hosting provider/region/logging and external provider retention are unknown and outside Jalan's control. Search text is sent in the Nominatim URL; route endpoint coordinates are sent to the OSRM public demo; map tile requests can disclose the viewed area, including an area centered on the user's location.
+- Malformed route-response fixtures, actual browser permission prompts, live-provider behavior, and physical-device tests were not performed.
+- Production CSP and response security headers, plus a recurring dependency audit process, remain outstanding. MapLibre is now self-hosted from an integrity-verified release with SRI on the entry modules and CSS.
+- Clearing Jalan app data cannot remove browser history, provider/hosting logs, device permission records, or browser-managed HTTP cache.
+
+## Recommended next steps
+
+Complete operator/provider and hosting review, populate legal placeholders, obtain Malaysian legal review, and configure/test production security headers. Maintain a lockfile-based recurring dependency audit and verify vendor integrity at release updates. Then perform authorized physical-device permission and lifecycle verification. Do not begin native Android integration until these risks have been reviewed.
+
+---
+
+# Jalan — Production Readiness Security and Reliability Pass
+
+## Implemented
+
+- Replaced the CDN-loaded MapLibre 4.7.1 with same-origin MapLibre GL JS 6.18.0 assets. The release tarball SHA-512 was verified against npm registry metadata before the browser module, worker, stylesheet, and license were vendored. SRI metadata protects the bootstrap, main module, shared module, and CSS. Existing app code remains vanilla JavaScript; a small module bootstrap preserves script initialization order and displays a map-unavailable message if MapLibre fails to load.
+- Added the vendor package license and removed the separate UNPKG request. Google Fonts remains an external disclosed resource; its browser-adaptive stylesheet does not use a fixed SRI hash.
+- Updated the service-worker cache version for the changed shell and precached the module bootstrap. The larger MapLibre modules/worker remain outside the service-worker cache; maps are not promised offline.
+- Added user-visible, rate-limited map data load errors to avoid logging the same tile failure repeatedly.
+- Search now distinguishes malformed JSON/unexpected response shapes from an empty result set; invalid result entries are filtered safely.
+- Route response validation now returns an explicit invalid-response error for malformed objects and primary route geometry. Existing HTTP status handling, abort timeouts, cancellation on replacement/clear, coordinate validation, and no-auto-retry behavior remain in place. Nominatim and OSRM requests are not automatically retried; Search's manual retry respects the Nominatim request interval.
+- Updated security guidance with dependency audit results and example response-header/CSP policy requirements. These headers are recommendations only: the static project does not configure production server headers.
+
+## Dependency audit
+
+- A temporary npm audit for the previous pinned MapLibre 4.7.1 dependency reported **GHSA-jrc7-96c5-q579, critical** (XSS sanitizer bypass; affected versions `<=6.4.0`).
+- Upgraded to 6.18.0 after compatibility checks. A temporary audit of 6.18.0 and its npm dependency graph reported zero known advisories on 12 November 2026.
+- The project has no package manifest or lockfile; the audit snapshot is not a committed automated audit process. Recheck advisories and publisher integrity during dependency updates.
+
+## Verification performed
+
+- JavaScript syntax checks passed for app scripts, service worker, and the module bootstrap.
+- A local browser loaded MapLibre 6.18.0, created the map canvas and worker, loaded the existing OpenFreeMap style, and rendered the map. A mocked OSRM response produced the route summary; two alternatives rendered and selecting the second updated the displayed route, distance, duration, and instructions.
+- Mocked Nominatim and OSRM requests verified explicit search/route workflows. Malformed search JSON produced an actionable message; Nominatim HTTP 429 displayed a wait/retry message; a 201-character query is rejected before request (verified in the prior privacy phase).
+- Malformed route geometry produced an invalid-response message and reset the loading state. OSRM HTTP 503 produced a temporary-unavailable message. A delayed local OSRM fixture exercised the 15-second abort and timeout message; a delayed Nominatim fixture exercised its 12-second timeout. No external API failure probes were sent.
+- Mocked geolocation created exactly one watch, navigation used the fix and displayed progress, ending navigation cleared the watch and preserved the route preview. A simulated permission revocation cleared the watch, stopped navigation, and retained the route preview.
+- A mocked OpenFreeMap tile HTTP 503 response caused a user-visible map-data message. This was a browser fixture; live map resources were used only for ordinary visual compatibility checks.
+- At 390×844, 768×900, and 1440×900, the application had no horizontal document overflow after the MapLibre update.
+
+## Files changed in this pass
+
+- Updated: `index.html`, `script.js`, `service-worker.js`, `privacy.html`, `PRIVACY_DATA_INVENTORY.md`, `SECURITY.md`, `THREAT_MODEL.md`, `SECURITY_TEST_REPORT.md`, and `REPORT.md`.
+- Added: `assets/vendor/maplibre-gl/maplibre-bootstrap.js`, `maplibre-gl.mjs`, `maplibre-gl-shared.mjs`, `maplibre-gl-worker.mjs`, `maplibre-gl.css`, and `LICENSE.txt`.
+
+## Not tested / deployment-dependent
+
+- Production CSP enforcement, security headers, hosting/CDN tampering, real browser install/permissions, physical-device GPS, live Nominatim/OSRM outage behavior, and provider-side retention were not assessed.
+- The `SECURITY.md` CSP is a report-only starting point, not a validated production policy. Confirm all live OpenFreeMap style resource hosts and test all map, search, route, PWA update, and location flows before enforcing it.
+- Recommended host headers include HSTS after confirming the HTTPS deployment scope, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and clickjacking protection. Legal identity/provider/hosting confirmation and Malaysian legal review remain required.
+
+## Remaining risks and recommended next steps
+
+- Production response headers/CSP remain the primary unresolved application hardening gap. Configure them at the host and verify no needed resource is blocked.
+- Keep vendor assets synchronized with the verified npm package release; the same-origin deployment host remains a trusted code-delivery boundary. Maintain and review a lockfile/audit process if package-managed dependencies are introduced.
+- Public routing/geocoding/map providers may fail or change policies. No retry loop was added; user-controlled retry avoids amplifying requests and respects provider policy.
+- This is a prototype, not safety-certified navigation. No live traffic, background tracking, automatic rerouting, or guarantee of route/GPS accuracy is provided.
 
 ---
 

@@ -1,0 +1,9 @@
+.git
+.vercel
+node_modules
+coverage
+playwright-report
+test-results
+
+# Internal project, security, and privacy documentation.
+*.md
