@@ -11,7 +11,10 @@
 - Confirmed local, staged Git blob, and published digest values match. A local browser loaded the MapLibre map, `script.js`, and `pwa.js` under the configured CSP without JavaScript errors or CSP violations.
 - With mock geolocation, Nominatim, and OSRM responses: sidebar and route-planner controls responded; search result actions selected a destination; route calculation and both route alternatives worked; navigation follow/end worked; the GPS watch cleared and route preview remained. Mocked GPS permission denial displayed the expected message.
 - Verified service-worker activation and HTTP 200 for Privacy Policy and Terms. At 390×844, 768×900, and 1440×900, the map stayed visible and the document had no horizontal overflow. The route panel fit within the 390 px viewport.
-- Live production had not yet been rechecked after the source fix when these local tests were recorded. Real GPS permission prompts and live search/routing were not used in mocked tests.
+- Pushed as commit `5460f618bca2598f5d1a96ce4f68d12df6ecbd45`; the existing Vercel deployment updated automatically. Live HTML and bootstrap both returned HTTP 200, and the deployed bootstrap's SHA-384 matched the corrected SRI digest.
+- Live browser verification confirmed the map and tiles render, actual Nominatim search returned results, and actual OSRM routing returned alternatives. Navigation started and ended with mocked GPS; the route preview remained. The active service worker and manifest loaded with the expected MIME type; legal pages returned HTTP 200.
+- Live response headers included the configured CSP, HSTS, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy`. No CSP violations or JavaScript errors were observed. At 390×844, 768×900, and 1440×900, the map remained visible without horizontal overflow.
+- A real device/browser GPS permission prompt and install prompt were not exercised. OpenFreeMap emitted non-fatal style warnings about null filters and unavailable style images; these did not prevent map interaction.
 
 ## Files changed
 
