@@ -1,3 +1,25 @@
+# Jalan — Milestone 9.2: Restore Production Application Initialization
+
+## Incident and fix
+
+- The live Vercel page loaded only the MapLibre bootstrap module from `index.html`. The bootstrap is the intentional single entry point: it awaits MapLibre, then imports `api-config.js`, `privacy.js`, `script.js`, and `pwa.js` in order. This guarantees `window.maplibregl` is ready before the application initializes, and avoids duplicate initialization.
+- The live bootstrap request was blocked by Subresource Integrity: the configured digest matched the Windows CRLF working copy, but Git stored and Vercel served the LF-normalized blob. The observed live SHA-384 digest was `G+XFNTpflli0fl5FTqMf2dQASYiiq3DjTYC+MoH4FeqVXGUTxNhLdOHJWnSPEkFh`.
+- Updated the bootstrap's SRI digest in `index.html` and added `.gitattributes` to keep that hashed resource LF in future checkouts. No duplicate script tags or navigation changes were introduced.
+
+## Verification
+
+- Confirmed local, staged Git blob, and published digest values match. A local browser loaded the MapLibre map, `script.js`, and `pwa.js` under the configured CSP without JavaScript errors or CSP violations.
+- With mock geolocation, Nominatim, and OSRM responses: sidebar and route-planner controls responded; search result actions selected a destination; route calculation and both route alternatives worked; navigation follow/end worked; the GPS watch cleared and route preview remained. Mocked GPS permission denial displayed the expected message.
+- Verified service-worker activation and HTTP 200 for Privacy Policy and Terms. At 390×844, 768×900, and 1440×900, the map stayed visible and the document had no horizontal overflow. The route panel fit within the 390 px viewport.
+- Live production had not yet been rechecked after the source fix when these local tests were recorded. Real GPS permission prompts and live search/routing were not used in mocked tests.
+
+## Files changed
+
+- Updated: `index.html`, `REPORT.md`, `SECURITY.md`, `SECURITY_TEST_REPORT.md`.
+- Added: `.gitattributes`.
+
+---
+
 # Jalan — Milestone 9.1: Vercel Deployment Configuration
 
 ## Overview

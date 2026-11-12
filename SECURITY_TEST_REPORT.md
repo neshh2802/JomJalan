@@ -3,6 +3,12 @@
 **Date:** 12 November 2026
 **Environment:** Local project and isolated browser/mocked-service tests. No malicious requests were sent to third-party services.
 
+## Production initialization follow-up — 13 November 2026
+
+The pre-fix live deployment's MapLibre bootstrap failed browser SRI validation. `index.html`'s digest matched the Windows CRLF working copy, but the committed and deployed bootstrap was LF-normalized by Git. The live resource SHA-384 was `G+XFNTpflli0fl5FTqMf2dQASYiiq3DjTYC+MoH4FeqVXGUTxNhLdOHJWnSPEkFh`; the HTML had a different digest. Updated the HTML digest and added `.gitattributes` to keep the hashed bootstrap LF. The bootstrap's awaited module imports preserve MapLibre → API config → privacy → app → PWA ordering; no duplicate script tags were added.
+
+Local browser verification after the fix passed under the configured CSP: map rendered; app and PWA modules loaded; mocked search and Nominatim result actions worked; mocked OSRM calculation and route alternatives rendered; navigation follow/end cleared the mocked GPS watch and retained the route; mocked geolocation permission denial displayed the expected message; service worker activated; legal pages returned HTTP 200. At 390×844, 768×900, and 1440×900, the map remained visible without horizontal document overflow. No CSP violations or JavaScript errors were observed. These are local/mock results; the live Vercel deployment after push, real GPS prompt, and live Nominatim/OSRM remain deployment/device/provider checks.
+
 ## Scope and method
 
 Reviewed the local HTML, CSS, JavaScript, API configuration, manifest, offline page, service worker, and vendored MapLibre assets. Ran static checks, local HTTP checks, npm audit snapshots, live-browser compatibility checks, and browser tests with mocked geolocation, Nominatim, OSRM, and map tiles. This is not a penetration test, legal opinion, or external assessment. No malicious request traffic was sent to third-party services.
