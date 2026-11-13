@@ -5,7 +5,7 @@ const APP_SCOPE_KEY = APP_SCOPE_PATH
   .replace(/[^a-z0-9]+/gi, '-')
   .toLowerCase() || 'root';
 const CACHE_PREFIX = `jalan-shell-${APP_SCOPE_KEY}-`;
-const CACHE_NAME = `${CACHE_PREFIX}v7`;
+const CACHE_NAME = `${CACHE_PREFIX}v8`;
 const SHELL_PATHS = [
   './',
   'index.html',
