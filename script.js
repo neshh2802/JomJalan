@@ -24,6 +24,12 @@ const elements = {
   searchStatus: document.querySelector('#search-status'),
   routeToggle: document.querySelector('#route-toggle'),
   routeCard: document.querySelector('#route-card'),
+  routeSheetToggle: document.querySelector('#route-sheet-toggle'),
+  routeCollapsedSummary: document.querySelector('#route-collapsed-summary'),
+  routeCollapsedDestination: document.querySelector('#route-collapsed-destination'),
+  routeCollapsedChoice: document.querySelector('#route-collapsed-choice'),
+  routeCollapsedDistance: document.querySelector('#route-collapsed-distance'),
+  routeCollapsedDuration: document.querySelector('#route-collapsed-duration'),
   routeClose: document.querySelector('#route-close'),
   routeForm: document.querySelector('#route-form'),
   useLocationButton: document.querySelector('#use-location-button'),
@@ -60,6 +66,9 @@ const elements = {
   trackingStopButton: document.querySelector('#tracking-stop'),
   trackingFollowButton: document.querySelector('#tracking-follow'),
   trackingPanel: document.querySelector('.tracking-panel'),
+  mobileExploreButton: document.querySelector('#mobile-explore'),
+  mobileGpsButton: document.querySelector('#mobile-gps'),
+  mobilePlanButton: document.querySelector('#mobile-plan'),
   navigationPanel: document.querySelector('#navigation-panel'),
   navigationFollowButton: document.querySelector('#navigation-follow'),
   endNavigationButton: document.querySelector('#end-navigation'),
@@ -69,6 +78,8 @@ const elements = {
   navigationDistanceToManoeuvre: document.querySelector('#navigation-distance-to-manoeuvre'),
   navigationRemainingDistance: document.querySelector('#navigation-remaining-distance'),
   navigationRemainingTime: document.querySelector('#navigation-remaining-time'),
+  navigationProgress: document.querySelector('#navigation-progress'),
+  navigationArrivalTime: document.querySelector('#navigation-arrival-time'),
   navigationAlert: document.querySelector('#navigation-alert'),
   toast: document.querySelector('#toast'),
 };
@@ -97,6 +108,7 @@ let searchRequestId = 0;
 let activeResultIndex = -1;
 let searchTarget = 'destination';
 let navigationActive = false;
+let sidebarReturnFocus = null;
 let navigationProgressMeters = 0;
 let arrivalAnnounced = false;
 let lastMapErrorNoticeAt = 0;
@@ -160,13 +172,34 @@ function disableFollowAfterMapInteraction(event) {
 function setSidebar(open) {
   const isMobile = window.matchMedia('(max-width: 700px)').matches;
   if (isMobile) {
+    if (open) {
+      sidebarReturnFocus = document.activeElement;
+    }
     elements.sidebar.classList.toggle('mobile-open', open);
     elements.sidebarScrim.hidden = !open;
+    elements.sidebar.inert = !open;
+    if (open) {
+      elements.sidebar.querySelector(
+        'button:not([disabled]), a[href], input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+      )?.focus();
+    } else {
+      const returnFocus = sidebarReturnFocus;
+      sidebarReturnFocus = null;
+      if (returnFocus?.isConnected) {
+        returnFocus.focus();
+      }
+    }
   } else {
     elements.app.classList.toggle('sidebar-collapsed', !open);
+    elements.sidebar.inert = !open;
   }
   elements.menuToggle.setAttribute('aria-expanded', String(open));
-  elements.menuToggle.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
+  elements.menuToggle.setAttribute(
+    'aria-label',
+    isMobile
+      ? open ? 'Close explore menu' : 'Open explore menu'
+      : open ? 'Collapse sidebar' : 'Expand sidebar'
+  );
 }
 
 function setupSidebar() {
@@ -181,21 +214,67 @@ function setupSidebar() {
   elements.sidebarScrim.addEventListener('click', () => setSidebar(false));
 
   const handleResize = () => {
+    const focusWasInsideSidebar = elements.sidebar.contains(document.activeElement);
     elements.sidebar.classList.remove('mobile-open');
     elements.sidebarScrim.hidden = true;
     if (window.matchMedia('(max-width: 700px)').matches) {
       elements.app.classList.remove('sidebar-collapsed');
+      elements.sidebar.inert = true;
       elements.menuToggle.setAttribute('aria-expanded', 'false');
-      elements.menuToggle.setAttribute('aria-label', 'Expand sidebar');
+      elements.menuToggle.setAttribute('aria-label', 'Open explore menu');
+      if (focusWasInsideSidebar) {
+        elements.menuToggle.focus();
+      }
     } else {
+      const isOpen = !elements.app.classList.contains('sidebar-collapsed');
+      elements.sidebar.inert = !isOpen;
       elements.menuToggle.setAttribute(
         'aria-expanded',
-        String(!elements.app.classList.contains('sidebar-collapsed'))
+        String(isOpen)
+      );
+      elements.menuToggle.setAttribute(
+        'aria-label',
+        isOpen ? 'Collapse sidebar' : 'Expand sidebar'
       );
     }
   };
 
   window.addEventListener('resize', handleResize);
+  document.addEventListener('keydown', event => {
+    if (!window.matchMedia('(max-width: 700px)').matches ||
+        !elements.sidebar.classList.contains('mobile-open')) {
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setSidebar(false);
+      return;
+    }
+    if (event.key !== 'Tab') {
+      return;
+    }
+
+    const focusable = [...elements.sidebar.querySelectorAll(
+      'button:not([disabled]), a[href], input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+    )].filter(element => element.getClientRects().length > 0);
+    if (focusable.length === 0) {
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && (
+      document.activeElement === first || !elements.sidebar.contains(document.activeElement)
+    )) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (
+      document.activeElement === last || !elements.sidebar.contains(document.activeElement)
+    )) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
   handleResize();
 }
 
@@ -664,10 +743,32 @@ function setSearchTarget(target) {
 
 function openRoutePlanner() {
   elements.routeCard.hidden = false;
+  elements.app.classList.add('route-planner-open');
+  elements.mobilePlanButton.setAttribute('aria-expanded', 'true');
+  elements.trackingPanel.classList.remove('is-open');
+  elements.mobileGpsButton.setAttribute('aria-expanded', 'false');
+  setRouteSheetCollapsed(false);
   elements.routeToggle.setAttribute('aria-expanded', 'true');
   if (window.matchMedia('(max-width: 700px)').matches) {
     elements.routeDestination.focus();
   }
+}
+
+function setRouteSheetCollapsed(collapsed) {
+  const canCollapse = calculatedRoutes.length > 0;
+  const isCollapsed = Boolean(collapsed) && canCollapse;
+  elements.routeCard.classList.toggle('is-collapsed', isCollapsed);
+  elements.app.classList.toggle('route-sheet-collapsed', isCollapsed);
+  elements.routeSheetToggle.setAttribute('aria-expanded', String(!isCollapsed));
+  elements.routeSheetToggle.setAttribute(
+    'aria-label',
+    isCollapsed ? 'Expand route details' : 'Collapse route details'
+  );
+  elements.routeCollapsedSummary.hidden = !canCollapse;
+  elements.routeCollapsedSummary.setAttribute('aria-label', isCollapsed
+    ? 'Expand route details'
+    : 'Route details');
+  elements.routeCollapsedSummary.setAttribute('aria-expanded', String(!isCollapsed));
 }
 
 function isValidCoordinate(value, minimum, maximum) {
@@ -750,15 +851,30 @@ function setupCategories() {
 function setupRoutePlanner() {
   const setOpen = open => {
     elements.routeCard.hidden = !open;
+    elements.app.classList.toggle('route-planner-open', open);
     elements.routeToggle.setAttribute('aria-expanded', String(open));
+    elements.mobilePlanButton.setAttribute('aria-expanded', String(open));
     if (open) {
+      elements.trackingPanel.classList.remove('is-open');
+      elements.mobileGpsButton.setAttribute('aria-expanded', 'false');
+      setRouteSheetCollapsed(false);
       elements.routeDestination.focus();
     }
   };
 
   elements.routeToggle.setAttribute('aria-expanded', 'false');
   elements.routeToggle.addEventListener('click', () => setOpen(elements.routeCard.hidden));
-  elements.routeClose.addEventListener('click', () => setOpen(false));
+  elements.routeClose.addEventListener('click', () => {
+    setOpen(false);
+    (window.matchMedia('(max-width: 700px)').matches
+      ? elements.mobilePlanButton
+      : elements.routeToggle).focus();
+  });
+  elements.routeSheetToggle.addEventListener('click', () => {
+    setRouteSheetCollapsed(elements.routeSheetToggle.getAttribute('aria-expanded') === 'true');
+  });
+  elements.routeCollapsedSummary.addEventListener('click', () => setRouteSheetCollapsed(false));
+  setupRouteSheetDragging();
   elements.originSearchButton.addEventListener('click', () => setSearchTarget('origin'));
   elements.destinationSearchButton.addEventListener('click', () => setSearchTarget('destination'));
   elements.swapRouteButton.addEventListener('click', swapRouteEndpoints);
@@ -847,12 +963,100 @@ function setupRoutePlanner() {
     elements.instructionsToggle.setAttribute('aria-expanded', String(expanded));
     elements.routeInstructions.hidden = !expanded;
   });
+  elements.mobileExploreButton.addEventListener('click', () => {
+    const isOpen = elements.sidebar.classList.contains('mobile-open');
+    setSidebar(!isOpen);
+  });
+  elements.mobileGpsButton.addEventListener('click', () => {
+    const open = !elements.trackingPanel.classList.contains('is-open');
+    elements.trackingPanel.classList.toggle('is-open', open);
+    elements.mobileGpsButton.setAttribute('aria-expanded', String(open));
+    if (open) {
+      if (!elements.routeCard.hidden) {
+        setOpen(false);
+      }
+      (elements.trackingStartButton.hidden
+        ? elements.trackingFollowButton
+        : elements.trackingStartButton).focus();
+    }
+  });
+  elements.mobilePlanButton.addEventListener('click', () => {
+    elements.routeToggle.click();
+  });
 
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !elements.routeCard.hidden) {
       setOpen(false);
+      (window.matchMedia('(max-width: 700px)').matches
+        ? elements.mobilePlanButton
+        : elements.routeToggle).focus();
+    } else if (
+      event.key === 'Escape' &&
+      elements.trackingPanel.classList.contains('is-open')
+    ) {
+      elements.trackingPanel.classList.remove('is-open');
+      elements.mobileGpsButton.setAttribute('aria-expanded', 'false');
+      elements.mobileGpsButton.focus();
     }
   });
+}
+
+function setupRouteSheetDragging() {
+  let startY = null;
+  let dragHandle = null;
+  let suppressClick = false;
+  const handles = [
+    elements.routeCard.querySelector('.route-card-heading'),
+    elements.routeCollapsedSummary,
+  ];
+
+  handles.forEach(handle => {
+    handle.addEventListener('pointerdown', event => {
+      if (!window.matchMedia('(max-width: 700px)').matches) {
+        return;
+      }
+      if (handle !== elements.routeCollapsedSummary && event.target.closest('button, a')) {
+        return;
+      }
+      startY = event.clientY;
+      dragHandle = handle;
+      handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener('pointermove', event => {
+      if (dragHandle !== handle || startY === null) {
+        return;
+      }
+      const offset = Math.max(0, event.clientY - startY);
+      elements.routeCard.style.transform = `translateY(${offset}px)`;
+    });
+    handle.addEventListener('pointerup', event => {
+      if (dragHandle !== handle || startY === null) {
+        return;
+      }
+      const distance = event.clientY - startY;
+      elements.routeCard.style.transform = '';
+      if (Math.abs(distance) > 40) {
+        setRouteSheetCollapsed(distance > 0);
+        suppressClick = true;
+        window.setTimeout(() => {
+          suppressClick = false;
+        }, 0);
+      }
+      startY = null;
+      dragHandle = null;
+    });
+    handle.addEventListener('pointercancel', () => {
+      elements.routeCard.style.transform = '';
+      startY = null;
+      dragHandle = null;
+    });
+  });
+  elements.routeCollapsedSummary.addEventListener('click', event => {
+    if (suppressClick) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
 }
 
 function startNavigation() {
@@ -869,7 +1073,12 @@ function startNavigation() {
   elements.navigationFollowButton.setAttribute('aria-pressed', 'true');
   elements.navigationFollowButton.textContent = 'Following';
   elements.routeCard.hidden = true;
+  elements.app.classList.remove('route-planner-open');
+  elements.routeToggle.setAttribute('aria-expanded', 'false');
+  elements.mobilePlanButton.setAttribute('aria-expanded', 'false');
   elements.trackingPanel.hidden = true;
+  elements.trackingPanel.classList.remove('is-open');
+  elements.mobileGpsButton.setAttribute('aria-expanded', 'false');
   elements.routeToggle.disabled = true;
   elements.app.classList.add('navigation-active');
   renderNavigationProgress(route);
@@ -899,9 +1108,13 @@ function endNavigation(message = '') {
   elements.navigationPanel.hidden = true;
   elements.navigationAlert.hidden = true;
   elements.routeCard.hidden = false;
+  elements.app.classList.add('route-planner-open');
+  elements.routeToggle.setAttribute('aria-expanded', 'true');
+  elements.mobilePlanButton.setAttribute('aria-expanded', 'true');
   elements.trackingPanel.hidden = false;
   elements.routeToggle.disabled = false;
   elements.app.classList.remove('navigation-active');
+  setRouteSheetCollapsed(window.matchMedia('(max-width: 700px)').matches);
   if (trackingWatchId !== null) {
     stopLocationTracking();
   }
@@ -983,6 +1196,12 @@ function renderNavigationProgress(route, accuracy = null) {
     : 0;
   elements.navigationRemainingDistance.textContent = formatDistance(remaining);
   elements.navigationRemainingTime.textContent = formatDuration(remainingDuration);
+  elements.navigationProgress.value = route.distance > 0
+    ? Math.min(100, Math.max(0, navigationProgressMeters / route.distance * 100))
+    : 0;
+  elements.navigationArrivalTime.textContent = `ETA ${new Date(
+    Date.now() + remainingDuration * 1000
+  ).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
 }
 
 function getNavigationManeuvers(route) {
@@ -1240,6 +1459,7 @@ async function calculateRoute() {
     showRouteSummary(routes[0]);
     renderRouteOptions();
     elements.startNavigationButton.hidden = false;
+    setRouteSheetCollapsed(window.matchMedia('(max-width: 700px)').matches);
     setRouteMessage(routes.length > 1
       ? `${routes.length} driving routes found. Drive times are estimates and do not include live traffic.`
       : 'Route calculated. Drive times are estimates and do not include live traffic.', 'success');
@@ -1628,6 +1848,11 @@ function renderRouteGuidance(route) {
 function resetRouteGuidance() {
   calculatedRoutes = [];
   selectedRouteIndex = 0;
+  elements.routeCollapsedSummary.hidden = true;
+  elements.routeCard.classList.remove('is-collapsed');
+  elements.app.classList.remove('route-sheet-collapsed');
+  elements.routeSheetToggle.setAttribute('aria-expanded', 'true');
+  elements.routeSheetToggle.setAttribute('aria-label', 'Collapse route details');
   elements.routeSummary.hidden = true;
   elements.startNavigationButton.hidden = true;
   elements.routeOptions.replaceChildren();
@@ -1665,6 +1890,10 @@ function showRouteSummary(route) {
   elements.routeDuration.textContent = formatDuration(route.duration);
   elements.routeSummaryOrigin.textContent = currentLocation.name;
   elements.routeSummaryDestination.textContent = selectedDestination.name;
+  elements.routeCollapsedDestination.textContent = selectedDestination.name;
+  elements.routeCollapsedChoice.textContent = `Route ${selectedRouteIndex + 1} · Selected`;
+  elements.routeCollapsedDistance.textContent = formatDistance(route.distance);
+  elements.routeCollapsedDuration.textContent = formatDuration(route.duration);
   elements.routeSummary.hidden = false;
 }
 

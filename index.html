@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f5f7f4">
     <meta name="description" content="A considered navigation concept for finding your way around Malaysia.">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,7 +27,7 @@
         <div class="map-wash" aria-hidden="true"></div>
 
         <header class="map-header">
-          <button class="icon-button menu-button" id="menu-toggle" type="button" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar">
+          <button class="icon-button menu-button" id="menu-toggle" type="button" aria-label="Open explore menu" aria-expanded="false" aria-controls="sidebar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
           </button>
           <a class="brand" href="#" aria-label="Jalan home">
@@ -76,8 +76,11 @@
           </button>
         </div>
 
-        <aside class="tracking-panel" aria-label="Live location tracking">
-          <p class="tracking-privacy-note">GPS is used after you choose a location feature. Map requests may reveal the viewed area; route coordinates are sent only when you calculate a route.</p>
+        <aside class="tracking-panel" id="tracking-panel" aria-label="Live location tracking">
+          <details class="tracking-details">
+            <summary>Location &amp; privacy</summary>
+            <p class="tracking-privacy-note">GPS is used after you choose a location feature. Map requests may reveal the viewed area; route coordinates are sent only when you calculate a route.</p>
+          </details>
           <div class="tracking-status" role="status" aria-live="polite">
             <span class="tracking-status-dot" id="tracking-status-dot" aria-hidden="true"></span>
             <span id="tracking-status">Tracking is off</span>
@@ -92,13 +95,27 @@
         <aside class="route-card" id="route-card" aria-labelledby="route-title" hidden>
           <div class="route-card-heading">
             <div>
-              <span class="eyebrow">A BETTER WAY THERE</span>
+              <span class="eyebrow">DIRECTIONS</span>
               <h2 id="route-title">Your route</h2>
             </div>
-            <button class="icon-button close-route" id="route-close" type="button" aria-label="Close route planner">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
-            </button>
+            <div class="route-heading-actions">
+              <button class="icon-button route-sheet-toggle" id="route-sheet-toggle" type="button" aria-label="Collapse route details" aria-expanded="true" aria-controls="route-sheet-content">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <button class="icon-button close-route" id="route-close" type="button" aria-label="Close route planner">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+              </button>
+            </div>
           </div>
+          <button class="route-collapsed-summary" id="route-collapsed-summary" type="button" aria-label="Expand route details" aria-controls="route-sheet-content" hidden>
+            <span class="route-collapsed-destination" id="route-collapsed-destination">Destination</span>
+            <span class="route-collapsed-details">
+              <span id="route-collapsed-choice">Selected route</span>
+              <strong id="route-collapsed-distance">—</strong>
+              <strong id="route-collapsed-duration">—</strong>
+            </span>
+          </button>
+          <div class="route-sheet-content" id="route-sheet-content">
           <form id="route-form" class="route-form">
             <div class="route-input route-origin-input">
               <span class="route-dot origin-dot"></span>
@@ -194,9 +211,10 @@
           </section>
           <p class="route-message" id="route-message" role="status" aria-live="polite">Choose a destination in search, then set your current location.</p>
           <p class="route-disclaimer">Driving route preview · No live traffic information</p>
+          </div>
         </aside>
 
-        <aside class="navigation-panel" id="navigation-panel" aria-label="Active route guidance" aria-live="polite" hidden>
+        <aside class="navigation-panel" id="navigation-panel" aria-label="Active route guidance" hidden>
           <div class="navigation-panel-heading">
             <span class="navigation-live-indicator"><span></span> ROUTE GUIDANCE</span>
             <div class="navigation-panel-actions">
@@ -207,17 +225,21 @@
           <div class="navigation-manoeuvre">
             <span class="navigation-manoeuvre-icon" id="navigation-manoeuvre-icon" aria-hidden="true">↑</span>
             <div class="navigation-manoeuvre-copy">
-              <strong id="navigation-instruction">Continue along the route</strong>
+              <strong id="navigation-instruction" aria-live="polite" aria-atomic="true">Continue along the route</strong>
               <span id="navigation-road">Road name unavailable</span>
               <span id="navigation-distance-to-manoeuvre">Waiting for GPS location</span>
             </div>
           </div>
           <div class="navigation-trip-metrics">
             <div><span>REMAINING</span><strong id="navigation-remaining-distance">—</strong></div>
-            <div><span>EST. TIME</span><strong id="navigation-remaining-time">—</strong></div>
+            <div><span>REMAINING TIME</span><strong id="navigation-remaining-time">—</strong></div>
+          </div>
+          <div class="navigation-progress" aria-label="Route progress">
+            <progress id="navigation-progress" max="100" value="0" aria-label="Route progress"></progress>
+            <span id="navigation-arrival-time">ETA —</span>
           </div>
           <p class="navigation-alert" id="navigation-alert" role="status" hidden></p>
-          <p class="navigation-approximation">Approximate route guidance · GPS accuracy may vary</p>
+          <p class="navigation-approximation">Approximate guidance · No live traffic or automatic rerouting</p>
         </aside>
 
         <div class="map-footer">
@@ -289,6 +311,21 @@
           </footer>
         </div>
       </aside>
+
+      <nav class="mobile-bottom-nav" aria-label="Map actions">
+        <button type="button" id="mobile-explore" aria-label="Explore nearby places">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+          <span>Explore</span>
+        </button>
+        <button type="button" id="mobile-gps" aria-label="Open location controls" aria-expanded="false" aria-controls="tracking-panel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+          <span>Location</span>
+        </button>
+        <button type="button" id="mobile-plan" aria-label="Plan a route" aria-expanded="false" aria-controls="route-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H11a3 3 0 0 0 3-3v-6a3 3 0 0 1 3-3"/></svg>
+          <span>Plan</span>
+        </button>
+      </nav>
 
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </main>
